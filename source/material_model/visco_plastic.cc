@@ -165,7 +165,7 @@ namespace aspect
 
 
     template <int dim>
-    std::vector<double>
+    std::pair<std::vector<double>, std::vector<double> >
     ViscoPlastic<dim>::
     calculate_isostrain_viscosities ( const std::vector<double> &volume_fractions,
                                       const double &pressure,
@@ -191,6 +191,7 @@ namespace aspect
 
       // Calculate viscosities for each of the individual compositional phases
       std::vector<double> composition_viscosities(volume_fractions.size());
+      std::vector<double> composition_yielding(volume_fractions.size());
       for (unsigned int j=0; j < volume_fractions.size(); ++j)
         {
           // Power law creep equation
@@ -284,12 +285,12 @@ namespace aspect
                                     coh * std::cos(phi) + std::max(pressure,0.0) * std::sin(phi) );
 
           // If the viscous stress is greater than the yield strength, rescale the viscosity back to yield surface
+          // Also, we use a value of 1 to indicate we'er in the yielding regime. 
           double viscosity_drucker_prager;
-          bool plastic_yielding = false;
           if ( viscous_stress >= yield_strength  )
             {
               viscosity_drucker_prager = yield_strength / (2.0 * edot_ii);
-              plastic_yielding = true;
+              composition_yielding[j] = 1.0;
             }
           else
             {
@@ -328,7 +329,7 @@ namespace aspect
           composition_viscosities[j] = std::min(std::max(viscosity_yield, min_visc), max_visc);
 
         }
-      return std::make_pair (composition_viscosities, plastic_yieling);
+      return std::make_pair (composition_viscosities, composition_yielding);
     }
 
 
@@ -400,18 +401,17 @@ namespace aspect
               // isostrain amongst all compositions, allowing calculation of the viscosity ratio.
               // TODO: This is only consistent with viscosity averaging if the arithmetic averaging
               // scheme is chosen. It would be useful to have a function to calculate isostress viscosities.
-              const std::pair<std::vector<double>, bool > calculate_viscosities = 
+              const std::pair<std::vector<double>, std::vector<double> > calculate_viscosities = 
                    calculate_isostrain_viscosities(volume_fractions, pressure, temperature, composition, in.strain_rate[i],viscous_flow_law,yield_mechanism);
               const std::vector<double> composition_viscosities = calculate_viscosities.first;
+              const std::vector<double> composition_yielding = calculate_viscosities.second;
  
-              plastic_yielding = calculate_viscosities.second;
-
               // The isostrain condition implies that the viscosity averaging should be arithmetic (see above).
               // We have given the user freedom to apply alternative bounds, because in diffusion-dominated
               // creep (where n_diff=1) viscosities are stress and strain-rate independent, so the calculation
               // of compositional field viscosities is consistent with any averaging scheme.
               out.viscosities[i] = average_value(composition, composition_viscosities, viscosity_averaging);
-
+              plastic_yielding   = average_value(composition, composition_viscosities, viscosity_averaging) > 0.5 ? true : false;
             }
 
           out.densities[i] = density;
@@ -438,7 +438,7 @@ namespace aspect
           // but only if we are in the plastic regime.
           double edot_ii = 0.;
           double e_ii = 0.;
-          if  (plastic_yielding == true, use_strain_weakening == true && use_finite_strain_tensor == false && this->get_timestep_number() > 0)
+          if  (plastic_yielding == true && use_strain_weakening == true && use_finite_strain_tensor == false && this->get_timestep_number() > 0)
             {
               edot_ii = std::max(sqrt(std::fabs(second_invariant(deviator(in.strain_rate[i])))),min_strain_rate);
               e_ii = edot_ii*this->get_timestep();
@@ -975,6 +975,8 @@ namespace aspect
                                    "through time. Consequently, the ideal solution is track the finite strain "
                                    "invariant (single compositional) field within the material and track "
                                    "the full finite strain tensor through tracers."
+                                   "When only the second invariant of the strain is tracked, it is only tracked "
+                                   "in case the material is plastically yielding, i.e. the viscous stess > yield strength. "
                                    ""
                                    "\n\n"
                                    "Viscous stress may also be limited by a non-linear stress limiter "

@@ -208,7 +208,7 @@ namespace aspect
                               const std::vector<double> &parameter_values,
                               const averaging_scheme &average_type) const;
 
-        std::vector<double>
+        std::pair<std::vector<double>, std::vector<double> >
         calculate_isostrain_viscosities ( const std::vector<double> &volume_fractions,
                                           const double &pressure,
                                           const double &temperature,
