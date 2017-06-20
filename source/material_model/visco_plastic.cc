@@ -438,7 +438,8 @@ namespace aspect
           // but only if we are in the plastic regime.
           double edot_ii = 0.;
           double e_ii = 0.;
-          if  (plastic_yielding == true && use_strain_weakening == true && use_finite_strain_tensor == false && this->get_timestep_number() > 0)
+          if  (use_strain_weakening == true && use_finite_strain_tensor == false && this->get_timestep_number() > 0)
+          if  ((use_plastic_strain_weakening == true && plastic_yielding == true) || use_plastic_strain_weakening == false)
             {
               edot_ii = std::max(sqrt(std::fabs(second_invariant(deviator(in.strain_rate[i])))),min_strain_rate);
               e_ii = edot_ii*this->get_timestep();
@@ -596,6 +597,10 @@ namespace aspect
                              Patterns::Bool (),
                              "Apply strain weakening to viscosity, cohesion and internal angle "
                              "of friction based on accumulated finite strain.  Units: None");
+          prm.declare_entry ("Use plastic strain weakening", "false",
+                             Patterns::Bool (),
+                             "Apply strain weakening to viscosity, cohesion and internal angle "
+                             "of friction based on accumulated finite plastic strain only.  Units: None");
           prm.declare_entry ("Use finite strain tensor", "false",
                              Patterns::Bool (),
                              "Track and use the full finite strain tensor for strain weakening. "
@@ -777,6 +782,10 @@ namespace aspect
           if (use_strain_weakening)
             AssertThrow(this->n_compositional_fields() >= 1,
                         ExcMessage("There must be at least one compositional field. "));
+          use_plastic_strain_weakening     = prm.get_bool ("Use plastic strain weakening");
+          if (use_plastic_strain_weakening)
+            AssertThrow(use_strain_weakening,
+                        ExcMessage("If plastic strain weakening is to be used, strain weakening should also be used. "));
           use_finite_strain_tensor  = prm.get_bool ("Use finite strain tensor");
           if (use_finite_strain_tensor)
             AssertThrow(this->n_compositional_fields() >= s,

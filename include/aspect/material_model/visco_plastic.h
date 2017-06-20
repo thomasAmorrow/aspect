@@ -227,6 +227,7 @@ namespace aspect
                               const unsigned int j ) const;
 
         bool use_strain_weakening;
+        bool use_plastic_strain_weakening;
         bool use_finite_strain_tensor;
         std::vector<double> start_strain_weakening_intervals;
         std::vector<double> end_strain_weakening_intervals;
