@@ -56,6 +56,12 @@ namespace aspect
          * the current object.
          */
         std::vector<double> friction_angles;
+
+        /**
+         * The area where the viscous stress exceeds the plastic yield strenght,
+         * and viscosity is rescaled back to the yield envelope.
+         */
+        std::vector<double> yielding;
     };
 
     /**

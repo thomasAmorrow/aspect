@@ -35,6 +35,7 @@ namespace aspect
         std::vector<std::string> names;
         names.push_back("current_cohesions");
         names.push_back("current_friction_angles");
+        names.push_back("plastic_yielding");
         return names;
       }
     }
@@ -44,7 +45,8 @@ namespace aspect
       :
       NamedAdditionalMaterialOutputs<dim>(make_plastic_additional_outputs_names()),
       cohesions(n_points, numbers::signaling_nan<double>()),
-      friction_angles(n_points, numbers::signaling_nan<double>())
+      friction_angles(n_points, numbers::signaling_nan<double>()),
+      yielding(n_points, numbers::signaling_nan<double>())
     {}
 
 
@@ -52,7 +54,7 @@ namespace aspect
     const std::vector<double> &
     PlasticAdditionalOutputs<dim>::get_nth_output(const unsigned int idx) const
     {
-      AssertIndexRange (idx, 2);
+      AssertIndexRange (idx, 3);
       switch (idx)
         {
           case 0:
@@ -60,6 +62,9 @@ namespace aspect
 
           case 1:
             return friction_angles;
+
+          case 2:
+            return yielding;
 
           default:
             AssertThrow(false, ExcInternalError());
@@ -411,7 +416,8 @@ namespace aspect
               // creep (where n_diff=1) viscosities are stress and strain-rate independent, so the calculation
               // of compositional field viscosities is consistent with any averaging scheme.
               out.viscosities[i] = average_value(composition, composition_viscosities, viscosity_averaging);
-              plastic_yielding   = average_value(composition, composition_viscosities, viscosity_averaging) > 0.5 ? true : false;
+              // TODO what averaging to use here? (Also, division by zero for harmonic)
+              plastic_yielding   = average_value(composition, composition_yielding, maximum_composition) > 0.5 ? true : false;
             }
 
           out.densities[i] = density;
@@ -481,6 +487,7 @@ namespace aspect
               plastic_out->cohesions[i] = C;
               // convert radians to degrees
               plastic_out->friction_angles[i] = phi * 180. / numbers::PI;
+              plastic_out->yielding[i] = plastic_yielding ? 1 : 0;
             }
         }
 
