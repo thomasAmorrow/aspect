@@ -285,9 +285,11 @@ namespace aspect
 
           // If the viscous stress is greater than the yield strength, rescale the viscosity back to yield surface
           double viscosity_drucker_prager;
+          bool plastic_yielding = false;
           if ( viscous_stress >= yield_strength  )
             {
               viscosity_drucker_prager = yield_strength / (2.0 * edot_ii);
+              plastic_yielding = true;
             }
           else
             {
@@ -326,7 +328,7 @@ namespace aspect
           composition_viscosities[j] = std::min(std::max(viscosity_yield, min_visc), max_visc);
 
         }
-      return composition_viscosities;
+      return std::make_pair (composition_viscosities, plastic_yieling);
     }
 
 
@@ -390,14 +392,19 @@ namespace aspect
             thermal_diffusivity += volume_fractions[j] * thermal_diffusivities[j];
 
           // calculate effective viscosity
+          // and retrieve whether the material is plastically yielding
+          bool plastic_yielding = false;
           if (in.strain_rate.size())
             {
               // Currently, the viscosities for each of the compositional fields are calculated assuming
               // isostrain amongst all compositions, allowing calculation of the viscosity ratio.
               // TODO: This is only consistent with viscosity averaging if the arithmetic averaging
               // scheme is chosen. It would be useful to have a function to calculate isostress viscosities.
-              const std::vector<double> composition_viscosities =
-                calculate_isostrain_viscosities(volume_fractions, pressure, temperature, composition, in.strain_rate[i],viscous_flow_law,yield_mechanism);
+              const std::pair<std::vector<double>, bool > calculate_viscosities = 
+                   calculate_isostrain_viscosities(volume_fractions, pressure, temperature, composition, in.strain_rate[i],viscous_flow_law,yield_mechanism);
+              const std::vector<double> composition_viscosities = calculate_viscosities.first;
+ 
+              plastic_yielding = calculate_viscosities.second;
 
               // The isostrain condition implies that the viscosity averaging should be arithmetic (see above).
               // We have given the user freedom to apply alternative bounds, because in diffusion-dominated
@@ -427,10 +434,11 @@ namespace aspect
           for (unsigned int c=0; c<in.composition[i].size(); ++c)
             out.reaction_terms[i][c] = 0.0;
           // If strain weakening is used, overwrite the first reaction term,
-          // which represents the second invariant of the strain tensor
+          // which represents the second invariant of the strain tensor,
+          // but only if we are in the plastic regime.
           double edot_ii = 0.;
           double e_ii = 0.;
-          if  (use_strain_weakening == true && use_finite_strain_tensor == false && this->get_timestep_number() > 0)
+          if  (plastic_yielding == true, use_strain_weakening == true && use_finite_strain_tensor == false && this->get_timestep_number() > 0)
             {
               edot_ii = std::max(sqrt(std::fabs(second_invariant(deviator(in.strain_rate[i])))),min_strain_rate);
               e_ii = edot_ii*this->get_timestep();
