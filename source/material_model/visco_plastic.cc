@@ -86,11 +86,17 @@ namespace aspect
         x_comp[i] = std::min(std::max(x_comp[i], 0.0), 1.0);
 
       // assign compositional fields associated with strain a value of 0
+      // there are several possibilities for the number of fields used to track strain:
+      // 1) the total, plastic or viscous strain is tracked by one field;
+      // 2) both the plastic and viscous strain are tracked separately by two fields, or
+      // 3) the components of the total strain tensor are tracked individually.
       if (use_strain_weakening == true)
         {
           if (use_finite_strain_tensor == false)
             {
               x_comp[0] = 0.0;
+              if (use_plastic_strain_weakening && use_viscous_strain_weakening)
+                x_comp[1] = 0.0;
             }
           else
             {
