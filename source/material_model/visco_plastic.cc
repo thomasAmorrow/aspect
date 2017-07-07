@@ -253,13 +253,13 @@ namespace aspect
               }
             }
 
-          // Calculate viscous stress
-          double viscous_stress = 2. * viscosity_pre_yield * edot_ii;
-
           double phi = angles_internal_friction[j];
 
           // Passing cohesions to a new variable
           double coh = cohesions[j];
+
+          // Viscous weakening
+          double viscous_weakening = 1.;
 
           // Strain weakening
           double strain_ii = 0.;
@@ -275,17 +275,29 @@ namespace aspect
                   const SymmetricTensor<2,dim> L = symmetrize( strain * transpose(strain) );
                   strain_ii = std::fabs(second_invariant(L));
                 }
-              else
+              else if (use_plastic_strain_weakening == true || use_viscous_strain_weakening == false)
                 {
                   // Here the compositional field already contains the finite strain invariant magnitude
                   strain_ii = composition[0];
                 }
 
               // Compute the weakened cohesions and friction angles for the current compositional field
-              std::pair<double, double> weakening = calculate_weakening(strain_ii, j);
+              std::pair<double, double> weakening = calculate_plastic_weakening(strain_ii, j);
               coh = weakening.first;
               phi = weakening.second;
+
+              if (use_viscous_strain_weakening == true && use_plastic_strain_weakening == true)
+                strain_ii = composition[1];
+
+              viscous_weakening = calculate_viscous_weakening(strain_ii, j);
             }
+
+
+          // Apply strain weakening of the viscous viscosity
+          viscosity_pre_yield *= viscous_weakening;
+
+          // Calculate viscous stress
+          double viscous_stress = 2. * viscosity_pre_yield * edot_ii;
 
           // Calculate Drucker Prager yield strength (i.e. yield stress)
           double yield_strength = ( (dim==3)
@@ -347,19 +359,36 @@ namespace aspect
     template <int dim>
     std::pair<double, double>
     ViscoPlastic<dim>::
-    calculate_weakening(const double strain_ii,
-                        const unsigned int j) const
+    calculate_plastic_weakening(const double strain_ii,
+                                const unsigned int j) const
     {
       // Constrain the second strain invariant of the previous timestep by the strain interval
-      const double cut_off_strain_ii = std::max(std::min(strain_ii,end_strain_weakening_intervals[j]),start_strain_weakening_intervals[j]);
+      const double cut_off_strain_ii = std::max(std::min(strain_ii,end_plastic_strain_weakening_intervals[j]),start_plastic_strain_weakening_intervals[j]);
 
       // Linear strain weakening of cohesion and internal friction angle between specified strain values
-      const double strain_fraction = ( cut_off_strain_ii - start_strain_weakening_intervals[j] ) /
-                                     ( start_strain_weakening_intervals[j] - end_strain_weakening_intervals[j] );
+      const double strain_fraction = ( cut_off_strain_ii - start_plastic_strain_weakening_intervals[j] ) /
+                                     ( start_plastic_strain_weakening_intervals[j] - end_plastic_strain_weakening_intervals[j] );
       const double current_coh = cohesions[j] + ( cohesions[j] - cohesions[j] * cohesion_strain_weakening_factors[j] ) * strain_fraction;
       const double current_phi = angles_internal_friction[j] + ( angles_internal_friction[j] - angles_internal_friction[j] * friction_strain_weakening_factors[j] ) * strain_fraction;
 
       return std::make_pair (current_coh, current_phi);
+    }
+
+    template <int dim>
+    double
+    ViscoPlastic<dim>::
+    calculate_viscous_weakening(const double strain_ii,
+                                const unsigned int j) const
+    {
+      // Constrain the second strain invariant of the previous timestep by the strain interval
+      const double cut_off_strain_ii = std::max(std::min(strain_ii,end_viscous_strain_weakening_intervals[j]),start_viscous_strain_weakening_intervals[j]);
+
+      // Linear strain weakening of cohesion and internal friction angle between specified strain values
+      const double strain_fraction = ( cut_off_strain_ii - start_viscous_strain_weakening_intervals[j] ) /
+                                     ( start_viscous_strain_weakening_intervals[j] - end_viscous_strain_weakening_intervals[j] );
+      const double weakening = 1. + ( 1. - 1. * viscous_strain_weakening_factors[j] ) * strain_fraction;
+
+      return weakening;
     }
 
     template <int dim>
@@ -451,12 +480,22 @@ namespace aspect
           double edot_ii = 0.;
           double e_ii = 0.;
           if  (use_strain_weakening == true && use_finite_strain_tensor == false && this->get_timestep_number() > 0)
-          if  ((use_plastic_strain_weakening == true && plastic_yielding == true) || use_plastic_strain_weakening == false)
             {
               edot_ii = std::max(sqrt(std::fabs(second_invariant(deviator(in.strain_rate[i])))),min_strain_rate);
               e_ii = edot_ii*this->get_timestep();
-              // Update reaction term
-              out.reaction_terms[i][0] = e_ii;
+              if  ((use_plastic_strain_weakening == true && plastic_yielding == true) ||
+                   (use_viscous_strain_weakening == true && plastic_yielding == false && use_plastic_strain_weakening == false) ||
+                   (use_plastic_strain_weakening == false && use_viscous_strain_weakeing == false))
+                 {
+                  // Update reaction term of the first compositional field which represents the total, plastic or viscous strain
+                  // (the latter only in case no plastic strain is tracked).
+                  out.reaction_terms[i][0] = e_ii;
+                 }
+              else if (use_viscous_strain_weakening == true && plastic_yielding == false && use_plastic_strain_weakening == true)
+                {
+                  // Update reaction term of the second compositional field, which represents the viscous strain
+                  out.reaction_terms[i][1] = e_ii;
+                }
             }
 
           // fill plastic outputs if they exist
@@ -467,7 +506,9 @@ namespace aspect
               // set to weakened values, or unweakened values when strain weakening is not used
               for (unsigned int j=0; j < volume_fractions.size(); ++j)
                 {
-                  if (use_strain_weakening == true)
+                  // the first compositional field contains the total strain or the plastic strain or, in case only viscous strain
+                  // weakening is applied, the viscous strain.
+                  if (use_strain_weakening == true && (use_plastic_strain_weakening == true || use_viscous_strain_weakening == false))
                     {
                       double strain_invariant = composition[0];
                       if (use_finite_strain_tensor == true)
@@ -480,7 +521,7 @@ namespace aspect
                           strain_invariant = std::fabs(second_invariant(L));
                         }
 
-                      std::pair<double, double> weakening = calculate_weakening(strain_invariant, j);
+                      std::pair<double, double> weakening = calculate_plastic_weakening(strain_invariant, j);
                       C   += volume_fractions[j] * weakening.first;
                       phi += volume_fractions[j] * weakening.second;
                     }
@@ -651,7 +692,7 @@ namespace aspect
                              "for a total of N+1 values, where N is the number of compositional fields. "
                              "If only one value is given, then all use the same value.  Units: None");
           prm.declare_entry ("Viscous strain weakening factors", "1.",
-                             Patterns::List(Patterns::Double(0)),
+                             Patterns::List(Patterns::Double(0,1)),
                              "List of viscous strain weakening factors "
                              "for background material and compositional fields, "
                              "for a total of N+1 values, where N is the number of compositional fields. "
