@@ -606,22 +606,42 @@ namespace aspect
                              "of friction based on accumulated finite strain.  Units: None");
           prm.declare_entry ("Use plastic strain weakening", "false",
                              Patterns::Bool (),
-                             "Apply strain weakening to viscosity, cohesion and internal angle "
+                             "Apply strain weakening to cohesion and internal angle "
                              "of friction based on accumulated finite plastic strain only.  Units: None");
+          prm.declare_entry ("Use viscous strain weakening", "false",
+                             Patterns::Bool (),
+                             "Apply strain weakening to diffusion and dislocation viscosity prefactors "
+                             "based on accumulated finite viscous strain only.  Units: None");
           prm.declare_entry ("Use finite strain tensor", "false",
                              Patterns::Bool (),
                              "Track and use the full finite strain tensor for strain weakening. "
                              "Units: None");
-          prm.declare_entry ("Start strain weakening intervals", "0.",
+          prm.declare_entry ("Start plastic strain weakening intervals", "0.",
                              Patterns::List(Patterns::Double(0)),
                              "List of strain weakening interval initial strains "
-                             "for background material and compositional fields, "
+                             "for the cohesion and friction angle parameters of the "
+                             "background material and compositional fields, "
                              "for a total of N+1 values, where N is the number of compositional fields. "
                              "If only one value is given, then all use the same value.  Units: None");
-          prm.declare_entry ("End strain weakening intervals", "1.",
+          prm.declare_entry ("End plastic strain weakening intervals", "1.",
                              Patterns::List(Patterns::Double(0)),
                              "List of strain weakening interval final strains "
-                             "for background material and compositional fields, "
+                             "for the cohesion and friction angle parameters of the "
+                             "background material and compositional fields, "
+                             "for a total of N+1 values, where N is the number of compositional fields. "
+                             "If only one value is given, then all use the same value.  Units: None");
+          prm.declare_entry ("Start viscous strain weakening intervals", "0.",
+                             Patterns::List(Patterns::Double(0)),
+                             "List of strain weakening interval initial strains "
+                             "for the diffusion and dislocation prefactor parameters of the "
+                             "background material and compositional fields, "
+                             "for a total of N+1 values, where N is the number of compositional fields. "
+                             "If only one value is given, then all use the same value.  Units: None");
+          prm.declare_entry ("End viscous strain weakening intervals", "1.",
+                             Patterns::List(Patterns::Double(0)),
+                             "List of strain weakening interval final strains "
+                             "for the diffusion and dislocation prefactor parameters of the "
+                             "background material and compositional fields, "
                              "for a total of N+1 values, where N is the number of compositional fields. "
                              "If only one value is given, then all use the same value.  Units: None");
           prm.declare_entry ("Viscous strain weakening factors", "1.",
@@ -788,21 +808,45 @@ namespace aspect
           use_strain_weakening             = prm.get_bool ("Use strain weakening");
           if (use_strain_weakening)
             AssertThrow(this->n_compositional_fields() >= 1,
-                        ExcMessage("There must be at least one compositional field. "));
+                        ExcMessage("There must be at least one compositional field to track the strain. "));
+
           use_plastic_strain_weakening     = prm.get_bool ("Use plastic strain weakening");
+          //TODO: is this neccessary?
           if (use_plastic_strain_weakening)
             AssertThrow(use_strain_weakening,
                         ExcMessage("If plastic strain weakening is to be used, strain weakening should also be used. "));
+          if (use_plastic_strain_weakening)
+            AssertThrow(this->n_compositional_fields() >= 1,
+                        ExcMessage("There must be at least one compositional field to track the plastic strain. "));
+
+          use_viscous_strain_weakening     = prm.get_bool ("Use viscous strain weakening");
+          //TODO: is this neccessary?
+          if (use_viscous_strain_weakening)
+            AssertThrow(use_strain_weakening,
+                        ExcMessage("If viscous strain weakening is to be used, strain weakening should also be used. "));
+          if (use_viscous_strain_weakening)
+            AssertThrow(this->n_compositional_fields() >= 1,
+                        ExcMessage("There must be at least one compositional field to track the viscous strain. "));
+          if (use_plastic_strain_weakening && use_viscous_strain_weakening)
+            AssertThrow(this->n_compositional_fields() >= 2,
+                        ExcMessage("There must be at least two compositional fields to track both the plastic viscous strain. "));
+
           use_finite_strain_tensor  = prm.get_bool ("Use finite strain tensor");
           if (use_finite_strain_tensor)
             AssertThrow(this->n_compositional_fields() >= s,
                         ExcMessage("There must be enough compositional fields to track all components of the finite strain tensor (4 in 2D, 9 in 3D). "));
-          start_strain_weakening_intervals = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("Start strain weakening intervals"))),
+          start_plastic_strain_weakening_intervals = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("Start strain weakening intervals"))),
                                                                                      n_fields,
-                                                                                     "Start strain weakening intervals");
-          end_strain_weakening_intervals = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("End strain weakening intervals"))),
+                                                                                     "Start plastic strain weakening intervals");
+          end_plastic_strain_weakening_intervals = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("End strain weakening intervals"))),
                                                                                    n_fields,
-                                                                                   "End strain weakening intervals");
+                                                                                   "End plastic strain weakening intervals");
+          start_viscous_strain_weakening_intervals = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("Start strain weakening intervals"))),
+                                                                                     n_fields,
+                                                                                     "Start viscous strain weakening intervals");
+          end_viscous_strain_weakening_intervals = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("End strain weakening intervals"))),
+                                                                                   n_fields,
+                                                                                   "End viscous strain weakening intervals");
           viscous_strain_weakening_factors = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("Viscous strain weakening factors"))),
                                                                                      n_fields,
                                                                                      "Viscous strain weakening factors");
