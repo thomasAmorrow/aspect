@@ -229,8 +229,17 @@ namespace aspect
          * compositional field.
          */
         std::pair<double, double>
-        calculate_weakening ( const double strain_ii,
-                              const unsigned int j ) const;
+        calculate_plastic_weakening ( const double strain_ii,
+                                      const unsigned int j ) const;
+
+        /**
+         * A function that computes the strain weakened values
+         * of the diffusion and dislocation prefactors for a given
+         * compositional field.
+         */
+        std::pair<double, double>
+        calculate_viscous_weakening ( const double strain_ii,
+                                      const unsigned int j ) const;
 
         /**
          * Whether to use the accumulated strain to weaken
