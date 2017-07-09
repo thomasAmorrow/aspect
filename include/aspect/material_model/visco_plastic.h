@@ -237,7 +237,7 @@ namespace aspect
          * of the diffusion and dislocation prefactors for a given
          * compositional field.
          */
-        std::pair<double, double>
+        double
         calculate_viscous_weakening ( const double strain_ii,
                                       const unsigned int j ) const;
 

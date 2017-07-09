@@ -485,7 +485,7 @@ namespace aspect
               e_ii = edot_ii*this->get_timestep();
               if  ((use_plastic_strain_weakening == true && plastic_yielding == true) ||
                    (use_viscous_strain_weakening == true && plastic_yielding == false && use_plastic_strain_weakening == false) ||
-                   (use_plastic_strain_weakening == false && use_viscous_strain_weakeing == false))
+                   (use_plastic_strain_weakening == false && use_viscous_strain_weakening == false))
                  {
                   // Update reaction term of the first compositional field which represents the total, plastic or viscous strain
                   // (the latter only in case no plastic strain is tracked).
