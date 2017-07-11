@@ -882,16 +882,16 @@ namespace aspect
           if (use_finite_strain_tensor)
             AssertThrow(this->n_compositional_fields() >= s,
                         ExcMessage("There must be enough compositional fields to track all components of the finite strain tensor (4 in 2D, 9 in 3D). "));
-          start_plastic_strain_weakening_intervals = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("Start strain weakening intervals"))),
+          start_plastic_strain_weakening_intervals = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("Start plastic strain weakening intervals"))),
                                                                                      n_fields,
                                                                                      "Start plastic strain weakening intervals");
-          end_plastic_strain_weakening_intervals = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("End strain weakening intervals"))),
+          end_plastic_strain_weakening_intervals = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("End plastic strain weakening intervals"))),
                                                                                    n_fields,
                                                                                    "End plastic strain weakening intervals");
-          start_viscous_strain_weakening_intervals = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("Start strain weakening intervals"))),
+          start_viscous_strain_weakening_intervals = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("Start viscous strain weakening intervals"))),
                                                                                      n_fields,
                                                                                      "Start viscous strain weakening intervals");
-          end_viscous_strain_weakening_intervals = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("End strain weakening intervals"))),
+          end_viscous_strain_weakening_intervals = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("End viscous strain weakening intervals"))),
                                                                                    n_fields,
                                                                                    "End viscous strain weakening intervals");
           viscous_strain_weakening_factors = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("Viscous strain weakening factors"))),
