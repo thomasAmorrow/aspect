@@ -213,7 +213,19 @@ namespace aspect
                                          std::pow(edot_ii,((1. - stress_exponents_dislocation[j])/stress_exponents_dislocation[j]));
 
           // Composite viscosity
-          double viscosity_composite = (viscosity_diffusion * viscosity_dislocation)/(viscosity_diffusion + viscosity_dislocation);
+          double viscosity_composite = 0.0;
+          switch (composite_type)
+            {
+              case type_1:
+                {
+                   viscosity_composite = (viscosity_diffusion * viscosity_dislocation) / 
+                                         (viscosity_diffusion + viscosity_dislocation);
+                }
+              case type_2:
+                {
+                   viscosity_composite = std::pow( 1.0/viscosity_diffusion + 1.0/viscosity_dislocation, -1.0 );
+                }
+            }
 
           // Select what form of viscosity to use (diffusion, dislocation or composite)
           double viscosity_pre_yield = 0.0;
@@ -636,6 +648,9 @@ namespace aspect
                              "Select what type of viscosity law to use between diffusion, "
                              "dislocation and composite options. Soon there will be an option "
                              "to select a specific flow law for each assigned composition ");
+          prm.declare_entry ("Composite viscosity", "type 1",
+                             Patterns::Selection("type 1|type 2"),
+                             "Select the type of composite averaging scheme.");
           prm.declare_entry ("Yield mechanism", "drucker",
                              Patterns::Selection("drucker|limiter"),
                              "Select what type of yield mechanism to use between Drucker Prager "
@@ -810,6 +825,15 @@ namespace aspect
             viscous_flow_law = dislocation;
           else
             AssertThrow(false, ExcMessage("Not a valid viscous flow law"));
+
+          // Rheological parameters
+          if (prm.get ("Composite viscosity") == "type 1")
+            composite_type = type_1;
+          else if (prm.get ("Composite viscosity") == "type 2")
+            composite_type = type_2;
+          else
+            AssertThrow(false, ExcMessage("Not a valid composite viscosity type"));
+
 
           // Rheological parameters
           if (prm.get ("Yield mechanism") == "drucker")

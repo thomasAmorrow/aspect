@@ -195,6 +195,17 @@ namespace aspect
         } viscous_flow_law;
 
         /**
+         * Enumeration for selecting which type of composite viscosity to use.
+         * Select between type 1 and type 2.
+         */
+        enum CompositeScheme
+        {
+          type_1,
+          type_2
+        } composite_type;
+
+
+        /**
          * Enumeration for selecting which type of yield mechanism to use.
          * Select between Drucker Prager and stress limiter.
          */
