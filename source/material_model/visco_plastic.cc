@@ -184,7 +184,8 @@ namespace aspect
                                       const std::vector<double> &composition,
                                       const SymmetricTensor<2,dim> &strain_rate,
                                       const ViscosityScheme &viscous_type,
-                                      const YieldScheme &yield_type) const
+                                      const YieldScheme &yield_type,
+                                      const double length_scale) const
     {
       // This function calculates viscosities assuming that all the compositional fields
       // experience the same strain rate (isostrain).
@@ -282,7 +283,7 @@ namespace aspect
                 }
 
               // Compute the weakened cohesions and friction angles for the current compositional field
-              std::pair<double, double> weakening = calculate_plastic_weakening(strain_ii, j);
+              std::pair<double, double> weakening = calculate_plastic_weakening(strain_ii, length_scale, j);
               coh = weakening.first;
               phi = weakening.second;
 
@@ -302,7 +303,7 @@ namespace aspect
           // Calculate Drucker Prager yield strength (i.e. yield stress)
           double yield_strength = ( (dim==3)
                                     ?
-                                    ( 6.0 * coh * std::cos(phi) + 2.0 * std::max(pressure,0.0) * std::sin(phi) )
+                                    ( 6.0 * coh * std::cos(phi) + 6.0 * std::max(pressure,0.0) * std::sin(phi) )
                                     / ( std::sqrt(3.0) * (3.0 + std::sin(phi) ) )
                                     :
                                     coh * std::cos(phi) + std::max(pressure,0.0) * std::sin(phi) );
@@ -360,14 +361,17 @@ namespace aspect
     std::pair<double, double>
     ViscoPlastic<dim>::
     calculate_plastic_weakening(const double strain_ii,
+                                const double length_scale,
                                 const unsigned int j) const
     {
       // Constrain the second strain invariant of the previous timestep by the strain interval
-      const double cut_off_strain_ii = std::max(std::min(strain_ii,end_plastic_strain_weakening_intervals[j]),start_plastic_strain_weakening_intervals[j]);
+      // scaled with mesh size
+      const double cut_off_strain_ii = std::max(std::min(strain_ii,end_plastic_strain_weakening_intervals[j] * length_scale),start_plastic_strain_weakening_intervals[j] * length_scale);
 
       // Linear strain weakening of cohesion and internal friction angle between specified strain values
-      const double strain_fraction = ( cut_off_strain_ii - start_plastic_strain_weakening_intervals[j] ) /
-                                     ( start_plastic_strain_weakening_intervals[j] - end_plastic_strain_weakening_intervals[j] );
+      // scaled with mesh size
+      const double strain_fraction = ( cut_off_strain_ii - start_plastic_strain_weakening_intervals[j] * length_scale ) /
+                                     ( start_plastic_strain_weakening_intervals[j] * length_scale - end_plastic_strain_weakening_intervals[j]  * length_scale);
       const double current_coh = cohesions[j] + ( cohesions[j] - cohesions[j] * cohesion_strain_weakening_factors[j] ) * strain_fraction;
       const double current_phi = angles_internal_friction[j] + ( angles_internal_friction[j] - angles_internal_friction[j] * friction_strain_weakening_factors[j] ) * strain_fraction;
 
@@ -441,8 +445,9 @@ namespace aspect
               // isostrain amongst all compositions, allowing calculation of the viscosity ratio.
               // TODO: This is only consistent with viscosity averaging if the arithmetic averaging
               // scheme is chosen. It would be useful to have a function to calculate isostress viscosities.
+              const double length_scale = in.cell ? 1./(in.cell->minimum_vertex_distance()/reference_length_strain) : 1.;
               const std::pair<std::vector<double>, std::vector<double> > calculate_viscosities = 
-                   calculate_isostrain_viscosities(volume_fractions, pressure, temperature, composition, in.strain_rate[i],viscous_flow_law,yield_mechanism);
+                   calculate_isostrain_viscosities(volume_fractions, pressure, temperature, composition, in.strain_rate[i],viscous_flow_law,yield_mechanism, length_scale);
               const std::vector<double> composition_viscosities = calculate_viscosities.first;
               const std::vector<double> composition_yielding = calculate_viscosities.second;
  
@@ -520,8 +525,8 @@ namespace aspect
                           const SymmetricTensor<2,dim> L = symmetrize( strain * transpose(strain) );
                           strain_invariant = std::fabs(second_invariant(L));
                         }
-
-                      std::pair<double, double> weakening = calculate_plastic_weakening(strain_invariant, j);
+                      const double length_scale = in.cell ? 1./(in.cell->minimum_vertex_distance()/reference_length_strain) : 1.;
+                      std::pair<double, double> weakening = calculate_plastic_weakening(strain_invariant, length_scale, j);
                       C   += volume_fractions[j] * weakening.first;
                       phi += volume_fractions[j] * weakening.second;
                     }
@@ -709,6 +714,13 @@ namespace aspect
                              "for background material and compositional fields, "
                              "for a total of N+1 values, where N is the number of compositional fields. "
                              "If only one value is given, then all use the same value.  Units: None");
+
+          // TODO what happens if adaptive mesh refinement is used over time?
+          prm.declare_entry ("Strain weakening reference length", "1e3", Patterns::Double(0),
+                             "The minimum vertex distance that is used as reference level in strain weakening. "
+                             "Strain on cells that are smaller or larger is scaled such that similar weakening "
+                             "results. Units $m$");
+
 
           // Rheological parameters
           prm.declare_entry ("Grain size", "1e-3", Patterns::Double(0), "Units: $m$");
@@ -903,6 +915,8 @@ namespace aspect
           friction_strain_weakening_factors = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("Friction strain weakening factors"))),
                                                                                       n_fields,
                                                                                       "Friction strain weakening factors");
+
+          reference_length_strain = prm.get_double("Strain weakening reference length");
 
           // Rheological parameters
           if (prm.get ("Viscosity averaging scheme") == "harmonic")

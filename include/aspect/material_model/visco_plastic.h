@@ -221,7 +221,8 @@ namespace aspect
                                           const std::vector<double> &composition,
                                           const SymmetricTensor<2,dim> &strain_rate,
                                           const ViscosityScheme &viscous_type,
-                                          const YieldScheme &yield_type) const;
+                                          const YieldScheme &yield_type,
+                                          const double length_scale) const;
 
         /**
          * A function that computes the strain weakened values
@@ -230,6 +231,7 @@ namespace aspect
          */
         std::pair<double, double>
         calculate_plastic_weakening ( const double strain_ii,
+                                      const double length_scale,
                                       const unsigned int j ) const;
 
         /**
@@ -309,6 +311,11 @@ namespace aspect
          */
         std::vector<double> viscous_strain_weakening_factors;
 
+        /**
+         * The reference length scale used in scaling the strain
+         * on different mesh refinement levels.
+         */
+        double reference_length_strain;
 
         std::vector<double> prefactors_diffusion;
         std::vector<double> stress_exponents_diffusion;
