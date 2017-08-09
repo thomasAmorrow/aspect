@@ -401,6 +401,25 @@ namespace aspect
     evaluate(const MaterialModel::MaterialModelInputs<dim> &in,
              MaterialModel::MaterialModelOutputs<dim> &out) const
     {
+      // Compute a length scale based on cell size to be used in strain weakening.
+      // Unfortunately, AdditionalNamedOutputs does not have access to cell.
+      // (One can abstract a cell_iterator (not active_cell_iterator!), but this requires
+      // changing the material model interface.)
+      // However, since Outputs is calculated on the cell vertices, we can do:
+      const double length_scale = in.cell
+                                  ?
+                                  1./((*in.cell)->minimum_vertex_distance()/reference_length_strain)
+                                  :
+                                  // The first time around for the calculation of the initial adiabatic profile
+                                  // there is only 1 point in Inputs
+                                  // To prevent an infinite length scale (even though it's not used),
+                                  // we set it to 1 in this case.
+                                  (in.strain_rate.size() == 0
+                                      ?
+                                      1.
+                                      :
+                                      1./((in.position[in.position.size()-1][0] - in.position[0][0])/reference_length_strain));
+
       // Loop through points
       for (unsigned int i=0; i < in.temperature.size(); ++i)
         {
@@ -445,7 +464,6 @@ namespace aspect
               // isostrain amongst all compositions, allowing calculation of the viscosity ratio.
               // TODO: This is only consistent with viscosity averaging if the arithmetic averaging
               // scheme is chosen. It would be useful to have a function to calculate isostress viscosities.
-              const double length_scale = in.cell ? 1./(in.cell->minimum_vertex_distance()/reference_length_strain) : 1.;
               const std::pair<std::vector<double>, std::vector<double> > calculate_viscosities = 
                    calculate_isostrain_viscosities(volume_fractions, pressure, temperature, composition, in.strain_rate[i],viscous_flow_law,yield_mechanism, length_scale);
               const std::vector<double> composition_viscosities = calculate_viscosities.first;
@@ -525,7 +543,6 @@ namespace aspect
                           const SymmetricTensor<2,dim> L = symmetrize( strain * transpose(strain) );
                           strain_invariant = std::fabs(second_invariant(L));
                         }
-                      const double length_scale = in.cell ? 1./(in.cell->minimum_vertex_distance()/reference_length_strain) : 1.;
                       std::pair<double, double> weakening = calculate_plastic_weakening(strain_invariant, length_scale, j);
                       C   += volume_fractions[j] * weakening.first;
                       phi += volume_fractions[j] * weakening.second;
