@@ -408,7 +408,7 @@ namespace aspect
       // However, since Outputs is calculated on the cell vertices, we can do:
       const double length_scale = in.cell
                                   ?
-                                  1./((*in.cell)->minimum_vertex_distance()/reference_length_strain)
+                                  reference_length_strain/(*in.cell)->minimum_vertex_distance()
                                   :
                                   // The first time around for the calculation of the initial adiabatic profile
                                   // there is only 1 point in Inputs
@@ -418,7 +418,10 @@ namespace aspect
                                       ?
                                       1.
                                       :
-                                      1./((in.position[in.position.size()-1][0] - in.position[0][0])/reference_length_strain));
+                                      // When the output is interpolated on a once-refined grid,
+                                      // scale it to the same size as cell.
+                                      (interpolate_output ? 2. : 1.) *
+                                      reference_length_strain/(in.position[in.position.size()-1][0] - in.position[0][0]));
 
       // Loop through points
       for (unsigned int i=0; i < in.temperature.size(); ++i)
@@ -1009,6 +1012,16 @@ namespace aspect
           exponents_stress_limiter  = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("Stress limiter exponents"))),
                                                                               n_fields,
                                                                               "Stress limiter exponents");
+        }
+        prm.leave_subsection();
+      }
+      prm.leave_subsection();
+
+      prm.enter_subsection("Postprocess");
+      {
+        prm.enter_subsection("Visualization");
+        {
+         interpolate_output = prm.get_bool("Interpolate output");
         }
         prm.leave_subsection();
       }

@@ -317,6 +317,13 @@ namespace aspect
          */
         double reference_length_strain;
 
+        /**
+         * When the output for visualization is interpolated onto
+         * a finer grid, we need to double our obtained length scale,
+         * to keep it equal to the length scale obtained from the cell objects.
+         */
+        bool interpolate_output;
+
         std::vector<double> prefactors_diffusion;
         std::vector<double> stress_exponents_diffusion;
         std::vector<double> grain_size_exponents_diffusion;
