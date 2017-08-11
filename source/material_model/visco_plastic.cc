@@ -309,7 +309,7 @@ namespace aspect
                                     coh * std::cos(phi) + std::max(pressure,0.0) * std::sin(phi) );
 
           // If the viscous stress is greater than the yield strength, rescale the viscosity back to yield surface
-          // Also, we use a value of 1 to indicate we'er in the yielding regime. 
+          // Also, we use a value of 1 to indicate we're in the yielding regime.
           double viscosity_drucker_prager;
           if ( viscous_stress >= yield_strength  )
             {
@@ -406,7 +406,9 @@ namespace aspect
       // (One can abstract a cell_iterator (not active_cell_iterator!), but this requires
       // changing the material model interface.)
       // However, since Outputs is calculated on the cell vertices, we can do:
-      const double length_scale = in.cell
+      double length_scale = 1.;
+      if (use_strain_scaling)
+                   length_scale = in.cell
                                   ?
                                   reference_length_strain/(*in.cell)->minimum_vertex_distance()
                                   :
@@ -517,7 +519,7 @@ namespace aspect
                   // (the latter only in case no plastic strain is tracked).
                   out.reaction_terms[i][0] = e_ii;
                  }
-              else if (use_viscous_strain_weakening == true && plastic_yielding == false && use_plastic_strain_weakening == true)
+              if (use_viscous_strain_weakening == true && plastic_yielding == false && use_plastic_strain_weakening == true)
                 {
                   // Update reaction term of the second compositional field, which represents the viscous strain
                   out.reaction_terms[i][1] = e_ii;
@@ -740,6 +742,10 @@ namespace aspect
                              "The minimum vertex distance that is used as reference level in strain weakening. "
                              "Strain on cells that are smaller or larger is scaled such that similar weakening "
                              "results. Units $m$");
+          prm.declare_entry ("Use strain scaling in weakening", "false", Patterns::Bool(),
+                             "Whether to scale the strain interval used in strain weakening with mesh level. "
+                             "Units $m$");
+
 
 
           // Rheological parameters
@@ -937,6 +943,7 @@ namespace aspect
                                                                                       "Friction strain weakening factors");
 
           reference_length_strain = prm.get_double("Strain weakening reference length");
+          use_strain_scaling = prm.get_bool("Use strain scaling in weakening");
 
           // Rheological parameters
           if (prm.get ("Viscosity averaging scheme") == "harmonic")

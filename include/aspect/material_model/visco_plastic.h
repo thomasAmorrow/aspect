@@ -312,6 +312,12 @@ namespace aspect
         std::vector<double> viscous_strain_weakening_factors;
 
         /**
+         * Whether to scale the strain used in weakening
+         * for mesh refinement level.
+         */
+        bool use_strain_scaling;
+
+        /**
          * The reference length scale used in scaling the strain
          * on different mesh refinement levels.
          */
