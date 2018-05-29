@@ -33,7 +33,6 @@ namespace aspect
     using namespace dealii;
 
     /**
-<<<<<<< HEAD
      * This model is desgined specifically to be used when CRUST1.0 defines"
      * the compositional initial conditions.  Currently, the model only uses"
      * one compositional field where the value at each point represents a"
@@ -41,34 +40,6 @@ namespace aspect
      * density values in the input file, which represent air, water, ice,"
      * sed layer 1, sed layer 2, sed layer 3, upper crust, middle crust,"
      * lower crust and mantle.
-=======
-     * A material model which is intended for use with multiple compositional
-     * fields. Each compositional field is meant to be a single rock type,
-     * where the value of the field at a point is interpreted to be a volume
-     * fraction of that rock type.  If the sum of the compositional field
-     * volume fractions is less than one, then the remainder of the volume is
-     * assumed to be ``background mantle''.  If the sum of the compositional
-     * field volume fractions is greater than one, then they are renormalized
-     * to sum to one and there is no background mantle.
-     *
-     * For each material parameter the user supplies a comma delimited list of
-     * length N+1, where N is the number of compositional fields.  The
-     * additional field corresponds to the value for background mantle.  They
-     * should be ordered ``background, composition1, composition2...''
-     *
-     * If a single value is given, then all the compositional fields are given
-     * that value. Other lengths of lists are not allowed.  For a given
-     * compositional field the material parameters are treated as constant,
-     * except density, which varies linearly with temperature according to the
-     * thermal expansivity.
-     *
-     * When more than one field is present at a point, they are averaged
-     * arithmetically. An exception is viscosity, which may be averaged
-     * arithmetically, harmonically, geometrically, or by selecting the
-     * viscosity of the composition with the greatest volume fraction.
-     *
->>>>>>> 5a81297... files added this time, bah!
-     * @ingroup MaterialModels
      */
     template <int dim>
     class Crust1 : public MaterialModel::Interface<dim>, public ::aspect::SimulatorAccess<dim>
@@ -137,8 +108,6 @@ namespace aspect
 
       private:
         /**
-<<<<<<< HEAD
-=======
          * From a list of compositional fields of length N, we come up with an
          * N+1 length list that which also includes the fraction of
          * ``background mantle''. This list should sum to one, and is
@@ -151,15 +120,12 @@ namespace aspect
         const std::vector<double> compute_volume_fractions(
           const std::vector<double> &compositional_fields) const;
         /**
->>>>>>> 5a81297... files added this time, bah!
          * Reference temperature for thermal expansion.  All components use
          * the same reference_T.
          */
         double reference_T;
 
         /**
-<<<<<<< HEAD
-=======
         * Enumeration for selecting which averaging scheme to use.
         * Select between harmonic, arithmetic, geometric, and
         * maximum_composition.  The max composition scheme simply uses the
@@ -182,7 +148,6 @@ namespace aspect
 
 
         /**
->>>>>>> 5a81297... files added this time, bah!
          * Vector for field densities, read from parameter file .
          */
         std::vector<double> densities;

@@ -62,10 +62,7 @@ namespace aspect
                 }
             }
           out.densities[i] = densities[com];
-<<<<<<< HEAD
-=======
           //std::cout << c << "," << com << "," << out.densities[i]  << std::endl;
->>>>>>> 5a81297... files added this time, bah!
 
           out.thermal_expansion_coefficients[i] = thermal_expansivities[0];
 
@@ -239,7 +236,6 @@ namespace aspect
   {
     ASPECT_REGISTER_MATERIAL_MODEL(Crust1,
                                    "crust1",
-<<<<<<< HEAD
                                    "This model is desgined specifically to be used when CRUST1.0 defines"
                                    " the compositional initial conditions.  Currently, the model only uses"
                                    " one compositional field where the value at each point represents a"
@@ -249,16 +245,5 @@ namespace aspect
                                    " lower crust and mantle.  At some point soon, density will be determined"
                                    " from a separate compositional field that contains the CRUST1.0 densities" 
                                    " read in from a file.")
-=======
-                                   "This model is for use with an arbitrary number of compositional fields, where each field"
-                                   " represents a rock type which can have completely different properties from the others."
-                                   " However, each rock type itself has constant material properties.  The value of the "
-                                   " compositional field is interpreed as a volume fraction. If the sum of the fields is"
-                                   " greater than one, they are renormalized.  If it is less than one, material properties "
-                                   " for ``background mantle'' make up the rest. When more than one field is present, the"
-                                   " material properties are averaged arithmetically.  An exception is the viscosity,"
-                                   " where the averaging should make more of a difference.  For this, the user selects"
-                                   " between arithmetic, harmonic, geometric, or maximum composition averaging.")
->>>>>>> 5a81297... files added this time, bah!
   }
 }
