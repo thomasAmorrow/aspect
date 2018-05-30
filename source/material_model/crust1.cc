@@ -43,14 +43,13 @@ namespace aspect
           const double temperature = in.temperature[i];
           const std::vector<double> composition = in.composition[i];
 
-          out.viscosities[i] = viscosities[0];
           out.specific_heat[i] = specific_heats[0];
           out.thermal_conductivities[i] = thermal_conductivities[0];
 
-          // composition
-          const double c = (in.composition[i].size()>0)
+          // Determine compositional index (e.g., rock type)
+          const double c = (composition.size()>0)
                            ?
-                           std::max(0.0, in.composition[i][0])
+                           std::max(0.0, std::round(composition[0]))
                            :
                            0.0;
           unsigned int com = 0;
@@ -61,9 +60,16 @@ namespace aspect
                   com = j;
                 }
             }
-          out.densities[i] = densities[com];
-          //std::cout << c << "," << com << "," << out.densities[i]  << std::endl;
 
+          // Density is the second compositional field
+          out.densities[i] = ( (in.current_cell.state() == IteratorState::valid)
+                               ?
+                               std::max(composition[1],10.0) 
+                               :
+                               densities[com]);
+
+          out.viscosities[i] = viscosities[com];
+ 
           out.thermal_expansion_coefficients[i] = thermal_expansivities[0];
 
           // Compressibility at the given positions.
@@ -202,7 +208,7 @@ namespace aspect
                                                               d_fields,
                                                               "Densities");
           viscosities = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("Viscosities"))),
-                                                                n_fields,
+                                                                d_fields,
                                                                 "Viscosities");
           thermal_conductivities = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("Thermal conductivities"))),
                                                                            n_fields,
