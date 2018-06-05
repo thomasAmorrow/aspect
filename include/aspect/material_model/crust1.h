@@ -125,6 +125,17 @@ namespace aspect
          */
         double reference_T;
 
+        /*
+         * Reference density for thermal expansion.  All components use
+         * the same reference_rho.
+         */
+        double reference_rho;
+
+        /*
+         * Depth where used-defined CRUST1.0 input extends to.
+         */
+        double crust1_depth;
+
         /**
         * Enumeration for selecting which averaging scheme to use.
         * Select between harmonic, arithmetic, geometric, and

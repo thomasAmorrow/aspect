@@ -40,7 +40,7 @@ namespace aspect
     {
       for (unsigned int i=0; i < in.temperature.size(); ++i)
         {
-          const double temperature = in.temperature[i];
+          //const double temperature = in.temperature[i];
           const std::vector<double> composition = in.composition[i];
 
           out.specific_heat[i] = specific_heats[0];
@@ -61,16 +61,28 @@ namespace aspect
                 }
             }
 
-          // Density is the second compositional field
-          out.densities[i] = ( (in.current_cell.state() == IteratorState::valid)
-                               ?
-                               std::max(composition[1],10.0) 
-                               :
-                               densities[com]);
+          const double thermal_alpha = thermal_expansivities[0];
 
+          const double depth = this->get_geometry_model().depth(in.position[i]);
+
+          // Density is the second compositional field
+          if ( depth < crust1_depth )
+            {
+              out.densities[i] = ( (in.current_cell.state() == IteratorState::valid)
+                                 ?
+                                 std::max(composition[1],10.0) 
+                                 :
+                                 densities[com]);
+            }
+          else
+            {
+              out.densities[i] = reference_rho * (1 - thermal_alpha * (in.temperature[i] - reference_T));
+            }
+
+  
           out.viscosities[i] = viscosities[com];
  
-          out.thermal_expansion_coefficients[i] = thermal_expansivities[0];
+          out.thermal_expansion_coefficients[i] = thermal_alpha;
 
           // Compressibility at the given positions.
           // The compressibility is given as
@@ -149,6 +161,12 @@ namespace aspect
           prm.declare_entry ("Reference temperature", "293",
                              Patterns::Double (0),
                              "The reference temperature $T_0$. Units: $K$.");
+          prm.declare_entry ("Reference density", "3300",
+                             Patterns::Double (0),
+                             "Reference density $\\rho_0$. Units: $kg/m^3$.");
+          prm.declare_entry ("Crust1 base depth", "120.e3",
+                             Patterns::Double (0),
+                             "Depth from model surface to base of defined crust1 density . Units: m.");
           prm.declare_entry ("Densities", "3300.",
                              Patterns::List(Patterns::Double(0)),
                              "List of densities for background mantle and compositional fields,"
@@ -201,7 +219,9 @@ namespace aspect
       {
         prm.enter_subsection("Crust1");
         {
-          reference_T = prm.get_double ("Reference temperature");
+          reference_rho = prm.get_double ("Reference density");
+          reference_T   = prm.get_double ("Reference temperature");
+          crust1_depth  = prm.get_double ("Crust1 base depth");
           
           // Parse multicomponent properties
           densities = Utilities::possibly_extend_from_1_to_N (Utilities::string_to_double(Utilities::split_string_list(prm.get("Densities"))),
