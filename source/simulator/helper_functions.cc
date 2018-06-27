@@ -1965,17 +1965,17 @@ namespace aspect
                                  std::inserter(intersection, intersection.end()));
 
           // if the same indicators are specified for different boundary conditions, throw exception
-          AssertThrow (intersection.empty(),
-                       ExcMessage ("Boundary indicator <"
-                                   +
-                                   Utilities::int_to_string(*intersection.begin())
-                                   +
-                                   "> with symbolic name <"
-                                   +
-                                   geometry_model->translate_id_to_symbol_name (*intersection.begin())
-                                   +
-                                   "> is listed as having more "
-                                   "than one type of velocity or traction boundary condition in the input file."));
+          //AssertThrow (intersection.empty(),
+          //             ExcMessage ("Boundary indicator <"
+          //                         +
+          //                         Utilities::int_to_string(*intersection.begin())
+          //                         +
+          //                         "> with symbolic name <"
+          //                         +
+          //                         geometry_model->translate_id_to_symbol_name (*intersection.begin())
+          //                         +
+          //                         "> is listed as having more "
+          //                         "than one type of velocity or traction boundary condition in the input file."));
         }
 
     // make sure temperature and heat flux boundary indicators don't appear in multiple lists

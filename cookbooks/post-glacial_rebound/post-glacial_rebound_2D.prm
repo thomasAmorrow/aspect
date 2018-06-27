@@ -1,0 +1,157 @@
+# Global parameters
+set Dimension                              = 2
+set Start time                             = 0
+set End time                               = 100e3
+set Use years in output instead of seconds = true
+set Resume computation                     = auto
+set CFL number                             = 0.5
+set Maximum time step                      = 1e3
+set Output directory                       = output_post-glacial_rebound_2D
+set Pressure normalization                 = no
+
+# Solver settings
+subsection Solver parameters
+  subsection Stokes solver parameters
+    set Number of cheap Stokes solver steps = 2000
+  end
+end
+
+# Model geometry (500x250 km, 10 km spacing)
+subsection Geometry model
+  set Model name = box
+
+  subsection Box
+    set X repetitions = 50
+    set Y repetitions = 25
+    set X extent      = 500.e3
+    set Y extent      = 250.e3
+  end
+end
+
+# Mesh refinement specifications 
+subsection Mesh refinement
+  set Initial adaptive refinement        = 0
+  set Initial global refinement          = 0
+  set Time steps between mesh refinement = 0
+end
+
+# Element types
+subsection Discretization
+  set Composition polynomial degree           = 2
+  set Stokes velocity polynomial degree       = 2
+  set Temperature polynomial degree           = 1
+end
+
+# Formulation classification
+subsection Formulation
+  set Enable elasticity = true
+end
+
+# Velocity boundary conditions
+subsection Boundary velocity model
+  set Zero velocity boundary indicators       = 
+  set Tangential velocity boundary indicators = bottom, left, right
+end
+
+# Traction boundary conditions
+subsection Boundary traction model
+  set Prescribed traction boundary indicators = top y: function
+  subsection Function
+    set Coordinate system = cartesian
+    set Function expression = 0; if (t<50.e3 && x>200.e3 && x<300.e3, -10.e6, 0);
+  end
+end
+
+#
+subsection Free surface
+  set Free surface boundary indicators  = top
+  set Surface velocity projection = normal
+end
+
+# Number and name of compositional fields
+subsection Compositional fields
+  set Number of fields = 4
+  set Names of fields  = stress_xx, stress_yy, stress_xy, lithosphere
+end
+
+# Spatial domain of different compositional fields
+subsection Initial composition model
+  set Model name = function
+  subsection Function
+    set Variable names      = x,y
+    set Function constants  = 
+    set Function expression = 0; 0; 0; \
+                              if (y>150.e3, 1, 0);
+  end
+end
+
+# Composition boundary conditions
+subsection Boundary composition model
+  set Fixed composition boundary indicators = bottom
+  set List of model names                   = initial composition
+end
+
+# Temperature boundary conditions 
+subsection Boundary temperature model
+  set Fixed temperature boundary indicators = bottom, top, left, right
+  set List of model names = initial temperature
+end
+
+# Temperature initial conditions (isothermal)
+subsection Initial temperature model
+  set Model name = function
+  subsection Function
+    set Function expression = 1573
+  end
+end
+
+# Material model
+subsection Material model
+
+  set Model name = viscoelastic
+
+  subsection Viscoelastic
+    set Densities            =  3300,  3300,  3300,  3300,  3000
+    set Viscosities          = 1.e20, 1.e20, 1.e20, 1.e20, 1.e22
+    set Elastic shear moduli = 1.e50, 1.e50, 1.e60, 1.e50, 1.e10
+    set Fixed elastic time step     = 1e3
+    set Use fixed elastic time step = false
+    set Use stress averaging        = false 
+    set Viscosity averaging scheme  = maximum composition
+  end
+
+end
+
+# Gravity model
+subsection Gravity model
+  set Model name = vertical
+  subsection Vertical
+    set Magnitude = 10.
+  end
+end
+
+# Post processing
+subsection Postprocess
+  set List of postprocessors = velocity statistics, basic statistics, temperature statistics, visualization
+  subsection Visualization
+    set List of output variables = material properties, strain rate 
+
+    subsection Material properties
+      set List of material properties = density, viscosity
+    end
+
+    set Time between graphical output = 0
+    set Interpolate output = true
+  end
+
+end
+
+# Termination criteria
+subsection Termination criteria
+ set Termination criteria = end step
+ set End step = 100
+end
+
+subsection Checkpointing
+  set Steps between checkpoint = 10
+end
