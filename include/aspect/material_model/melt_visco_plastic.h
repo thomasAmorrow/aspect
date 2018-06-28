@@ -24,7 +24,6 @@
 #include <aspect/material_model/interface.h>
 #include <aspect/postprocess/melt_statistics.h>
 #include <aspect/melt.h>
-#include <aspect/elastic.h>
 
 namespace aspect
 {
