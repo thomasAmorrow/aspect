@@ -139,10 +139,12 @@ namespace aspect
       // experience the same strain rate (isostrain).
 
       // Calculate the square root of the second moment invariant for the deviatoric strain rate tensor.
-      // The first time this function is called (first iteration of first time step)
-      // a specified "reference" strain rate is used as the returned value would
-      // otherwise be zero.
-      const double edot_ii = ( (this->get_timestep_number() == 0 && strain_rate.norm() <= std::numeric_limits<double>::min())
+      // During the first iteration of the first time step (e.g., time step 0) or when we are still
+      // *before* the first time step (time step number is numbers::invalid_unsigned_int) a specified
+      // reference strain rate is used.
+      const double edot_ii = ( ( this->get_timestep_number()==numbers::invalid_unsigned_int ||
+                                 ( this->get_timestep_number() == 0 &&
+                                   strain_rate.norm() <= std::numeric_limits<double>::min() ) )
                                ?
                                ref_strain_rate
                                :
